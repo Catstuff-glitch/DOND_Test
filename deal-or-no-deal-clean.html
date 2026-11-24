@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deal or No Deal: Football Edition</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1020; --panel:#141b33; --gold:#f5c542; --red:#e5484d; --blue:#3b82f6;
+    --pitch:#0f7a3d; --text:#f1f5f9; --muted:#94a3b8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,sans-serif;background:radial-gradient(circle at 50% -20%,#1e2a5a,var(--bg) 60%);color:var(--text);min-height:100vh}
+  .wrap{max-width:960px;margin:0 auto;padding:16px}
+  h1{font-family:Anton,sans-serif;letter-spacing:1px;text-align:center;margin:8px 0 2px;font-size:clamp(28px,7vw,48px);color:var(--gold);text-shadow:0 3px 0 #7a5a00}
+  .sub{text-align:center;color:var(--muted);margin:0 0 16px;font-size:14px}
+  .screen{display:none}.screen.on{display:block}
+  .card{background:var(--panel);border:1px solid #243058;border-radius:16px;padding:18px;margin-bottom:14px}
+  label{font-weight:600;font-size:14px;display:block;margin:10px 0 6px}
+  input,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid #2c3a6b;background:#0d1430;color:var(--text);font:inherit}
+  textarea{min-height:80px}
+  .btn{display:inline-block;border:0;border-radius:12px;padding:14px 22px;font:800 16px Inter,sans-serif;cursor:pointer;color:#111;background:var(--gold);text-transform:uppercase;letter-spacing:.5px}
+  .btn.red{background:var(--red);color:#fff}.btn.green{background:#22c55e;color:#04210f}
+  .btn.ghost{background:transparent;color:var(--text);border:1px solid #3a4a80}
+  .btn:active{transform:scale(.97)}
+  .center{text-align:center}
+  .status{font-family:Anton,sans-serif;font-size:22px;text-align:center;margin:6px 0 12px;letter-spacing:.5px}
+  .status small{display:block;font-family:Inter;font-size:13px;color:var(--muted);letter-spacing:0}
+  .layout{display:grid;grid-template-columns:1fr;gap:14px}
+  @media(min-width:760px){.layout{grid-template-columns:200px 1fr 200px}}
+  .board{display:flex;flex-direction:column;gap:5px}
+  .val{padding:6px 9px;border-radius:8px;font-size:12.5px;display:flex;justify-content:space-between;gap:6px;font-weight:600;transition:.3s}
+  .val.lo{background:linear-gradient(90deg,#1d4ed8,#2563eb)}
+  .val.hi{background:linear-gradient(90deg,#b91c1c,#dc2626)}
+  .val.out{opacity:.18;text-decoration:line-through}
+  
+  .boards-mobile{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  @media(min-width:760px){.boards-mobile{display:contents}}
+  .boxes{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:10px;align-content:start}
+  .box{aspect-ratio:1/1;border-radius:12px;background:linear-gradient(145deg,#d9dde6,#9aa3b5);color:#111;border:3px solid #6b7280;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Anton,sans-serif;font-size:26px;position:relative;box-shadow:0 4px 0 #4b5563;transition:.15s}
+  .box:hover{transform:translateY(-2px)}
+  .box .holder{font-family:Inter;font-size:10px;font-weight:600;color:#374151;max-width:90%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .box.opened{background:#1f2937;color:#64748b;border-color:#374151;box-shadow:none;cursor:default;font-size:11px;font-family:Inter;font-weight:600;text-align:center;padding:4px}
+  .box.opened .holder{display:none}
+  .box.mine{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold),0 4px 0 #7a5a00;cursor:default}
+  .mybox{display:flex;align-items:center;gap:14px;justify-content:center;margin-bottom:12px}
+  .mybox .box{width:74px;cursor:default}
+  .overlay{position:fixed;inset:0;background:rgba(3,6,18,.86);display:none;align-items:center;justify-content:center;z-index:10;padding:16px}
+  .overlay.on{display:flex}
+  .modal{max-height:90vh;overflow-y:auto;background:var(--panel);border:2px solid var(--gold);border-radius:20px;padding:24px;max-width:420px;width:100%;text-align:center;animation:pop .35s ease}
+  @keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+  .shirt{width:110px;height:110px;margin:6px auto 10px}
+  .pname{font-family:Anton,sans-serif;font-size:30px;letter-spacing:.5px}
+  .pval{font-size:22px;font-weight:800;margin-top:4px}
+  .pnote{color:var(--muted);font-size:14px;margin-top:8px;min-height:20px}
+  .offer{font-family:Anton,sans-serif;font-size:52px;color:var(--gold);margin:6px 0}
+  .phone{font-size:46px;animation:ring .5s infinite}
+  @keyframes ring{0%,100%{transform:rotate(0)}25%{transform:rotate(-14deg)}75%{transform:rotate(14deg)}}
+  .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+  .history{color:var(--muted);font-size:13px;margin-top:6px}
+  .suspense{font-family:Anton,sans-serif;font-size:60px;animation:pulse .6s infinite}
+  @keyframes pulse{50%{opacity:.3}}
+  .rules li{margin:5px 0;color:#cbd5e1;font-size:14px}
+  .tiny{font-size:12px;color:var(--muted);text-align:center;margin-top:10px}
+
+  .mute{position:fixed;top:10px;right:10px;z-index:20;background:#141b33;border:1px solid #3a4a80;color:#fff;border-radius:50%;width:42px;height:42px;font-size:20px;cursor:pointer}
+  .shake{animation:shake .12s infinite}
+  @keyframes shake{0%{transform:translate(0,0) rotate(0)}25%{transform:translate(-3px,1px) rotate(-3deg)}75%{transform:translate(3px,-1px) rotate(3deg)}}
+  .bigbox{width:120px;height:120px;margin:10px auto;border-radius:16px;background:linear-gradient(145deg,#ffe27a,#c99a12);color:#111;display:flex;align-items:center;justify-content:center;font:64px Anton,sans-serif;border:4px solid #7a5a00}
+  .count{font:80px Anton,sans-serif;color:var(--gold);animation:zoom 1s ease}
+  @keyframes zoom{from{transform:scale(2.2);opacity:0}to{transform:scale(1);opacity:1}}
+  .slowmo{animation:slowmo 1.8s ease}
+  @keyframes slowmo{from{transform:scale(.3) rotate(-8deg);opacity:0;filter:blur(6px)}to{transform:scale(1);opacity:1;filter:blur(0)}}
+  .banker-say{background:#0d1430;border-left:4px solid var(--gold);padding:10px 12px;border-radius:8px;text-align:left;font-style:italic;margin:10px 0}
+  .confetti{position:fixed;top:-10px;width:9px;height:14px;z-index:30;animation:fall linear forwards;pointer-events:none}
+  @keyframes fall{to{transform:translateY(105vh) rotate(720deg)}}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{border:1px solid #3a4a80;background:#0d1430;color:var(--text);border-radius:999px;padding:9px 14px;font:600 14px Inter,sans-serif;cursor:pointer}
+  .chip.on{background:var(--gold);color:#111;border-color:var(--gold)}
+  .val.traded{outline:2px dashed var(--gold)}
+  .timer{height:8px;background:#0d1430;border-radius:99px;overflow:hidden;margin-top:12px}
+  .timer-fill{height:100%;width:100%;background:var(--gold);transition:width .1s linear}
+  .commentary{background:#0d1430;border-left:4px solid #60a5fa;padding:10px 12px;border-radius:8px;text-align:left;font-weight:600;margin:12px 0 4px}
+  .era{display:inline-block;font:700 10px Inter,sans-serif;padding:2px 6px;border-radius:99px;margin-left:4px;color:#111;vertical-align:middle;white-space:nowrap}
+  .val .era{font-size:9px;padding:1px 5px}
+  .recap{text-align:left;margin:12px 0;font-size:14px}
+  .recap div{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #243058}
+  .sharebox{width:100%;min-height:120px;font-size:13px;margin-top:8px}
+  .hairdryer{animation:rage .09s 8}
+  @keyframes rage{0%,100%{transform:translate(0)}25%{transform:translate(-6px,3px)}75%{transform:translate(6px,-3px)}}
+  body.tv .wrap{max-width:1700px;padding:24px 40px}
+  body.tv h1{font-size:80px}
+  body.tv .sub{font-size:22px}
+  body.tv .status{font-size:42px}
+  body.tv .status small{font-size:20px}
+  body.tv .layout{grid-template-columns:330px 1fr 330px;gap:26px}
+  body.tv .boards-mobile{display:contents}
+  body.tv .val{font-size:19px;padding:9px 14px}
+  body.tv .boxes{grid-template-columns:repeat(6,1fr);gap:18px}
+  body.tv .box{font-size:52px;border-radius:18px}
+  body.tv .box.opened{font-size:17px}
+  body.tv .mybox .box{width:110px}
+  body.tv .mybox{font-size:24px}
+  body.tv .history{font-size:18px}
+  body.tv .modal{max-width:760px;padding:40px;font-size:24px}
+  body.tv .pname{font-size:58px}
+  body.tv .offer{font-size:60px!important}
+  body.tv .shirt{width:200px;height:200px}
+  body.tv .bigbox{width:200px;height:200px;font-size:110px}
+  body.tv .count{font-size:130px}
+  body.tv .btn{font-size:24px;padding:18px 34px}
+  body.tv .banker-say,body.tv .commentary{font-size:24px}
+  body.tv .card,body.tv .chip{font-size:20px}
+  body.tv .pnote,body.tv .tiny,body.tv .recap{font-size:20px}
+  body.tv .mute{width:56px;height:56px;font-size:26px}
+  body.tv #tvBtn{right:76px!important}
+  .tier{display:inline-block;font:700 10px Inter,sans-serif;padding:2px 7px;border-radius:99px;margin-left:6px;background:rgba(255,255,255,.9);color:#111}
+  .tier.t3{background:#f5c542}
+  body.tv .tier{font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>DEAL OR NO DEAL</h1>
+  <p class="sub">⚽ Football Edition ⚽</p>
+
+  <!-- SETUP -->
+  <div class="screen on" id="setup">
+    <div class="card">
+      <label>Squad</label>
+      <div class="chips" id="themeChips"></div>
+      <div id="customWrap" style="display:none">
+        <label for="custom">Your players — one per line, <b>weakest first, best last</b> (at least 28)</label>
+        <textarea id="custom" style="min-height:160px" placeholder="Sunday league hero&#10;...&#10;Lionel Messi"></textarea>
+        <div class="tiny" style="text-align:left" id="customCount">0 players</div>
+      </div>
+      <label>Gaffer</label>
+      <div class="chips" id="diffChips"></div>
+      <label>Mode</label>
+      <div class="chips" id="modeChips"></div>
+      <div class="tiny" style="text-align:left">Reverse: you want the <b>worst</b> player. The duds become the jackpot.</div>
+      <label>Board</label>
+      <div class="chips" id="boardChips"></div>
+      <div class="tiny" style="text-align:left">Blind: the board hides who's in play — you only see how good each one is (Dud, Decent, Quality, Legend) until their box opens.</div>
+    </div>
+    <div class="card">
+      <b>How it works</b>
+      <ul class="rules">
+        <li>22 boxes, each hiding a footballer — drawn at random from a big squad, so it's a different line-up every game. <b>Pick your box</b> — you don't know who's in it.</li>
+        <li>Open the others one by one. The board runs from weakest (blue) to best (red). Knock out the blues, dodge the reds.</li>
+        <li>After each round the Gaffer offers you a player from his own squad. <b>Deal</b> or <b>No Deal</b>?</li>
+        <li>Late on he may offer a <b>trade</b>: swap one of his players onto the board in place of one of yours.</li>
+        <li>Last two boxes standing: keep yours or swap.</li>
+      </ul>
+    </div>
+    <div class="center"><button class="btn" id="startBtn">Kick off</button><div class="tiny" id="setupErr" style="color:var(--red)"></div></div>
+  </div>
+
+
+  <!-- GAME -->
+  <div class="screen" id="game">
+    <div class="status" id="status"></div>
+    <div class="mybox">
+      <div class="box mine" id="myBoxEl">?</div>
+      <div><b>Your box</b><div class="history" id="offerHist"></div></div>
+    </div>
+    <div class="layout">
+      <div class="boards-mobile">
+        <div class="board" id="boardLo"></div>
+        <div class="board" id="boardHi" style="order:3"></div>
+      </div>
+      <div class="boxes" id="boxes" style="order:2"></div>
+    </div>
+  </div>
+</div>
+
+<button class="mute" id="tvBtn" style="right:60px" aria-label="TV screen mode">📺</button>
+<button class="mute" id="muteBtn" aria-label="Toggle sound">🔊</button>
+<div class="overlay" id="ov"><div class="modal" id="modal"></div></div>
+
+<script>
+// ===== Squads: names listed weakest -> best. Worth scores are derived from order and never shown. =====
+const THEMES={
+ current:{label:"Current stars",pool:["Chris Wood","Danny Welbeck","Callum Wilson","Jamie Vardy","Dominic Calvert-Lewin","Jordan Henderson","Raheem Sterling","Jadon Sancho","Jarrod Bowen","Mason Mount","Jack Grealish","Nathan Collins","Jordan Pickford","Marcus Rashford","Evan Ferguson","Luka Modrić","Ollie Watkins","Caoimhín Kelleher","Diogo Dalot","Dominic Solanke","Rasmus Højlund","Kai Havertz","Son Heung-min","Kevin De Bruyne","Jeremy Doku","Morgan Rogers","Kaoru Mitoma","Antoine Semenyo","Matheus Cunha","Bryan Mbeumo","Eberechi Eze","Bruno Guimarães","Virgil van Dijk","Mohamed Salah","Dominik Szoboszlai","Alexis Mac Allister","Enzo Fernández","Bruno Fernandes","Gabriel Martinelli","Leandro Trossard","Joško Gvardiol","Viktor Gyökeres","Alexander Isak","Martin Ødegaard","Phil Foden","Moisés Caicedo","Trent Alexander-Arnold","William Saliba","Achraf Hakimi","Khvicha Kvaratskhelia","Federico Valverde","Ousmane Dembélé","Rodri","Lautaro Martínez","Victor Osimhen","Rafael Leão","Nico Williams","Cole Palmer","Declan Rice","Michael Olise","Florian Wirtz","Raphinha","Vitinha","João Neves","Bukayo Saka","Désiré Doué","Harry Kane","Pedri","Jamal Musiala","Jude Bellingham","Vinícius Júnior","Erling Haaland","Kylian Mbappé","Lamine Yamal"]},
+ prem:{label:"Premier League",pool:["Chris Wood","Danny Welbeck","Callum Wilson","Jordan Henderson","Dominic Calvert-Lewin","Raheem Sterling","Jarrod Bowen","Mason Mount","Jack Grealish","Nathan Collins","Jordan Pickford","Richarlison","James Maddison","Ollie Watkins","Caoimhín Kelleher","Diogo Dalot","Dominic Solanke","Kai Havertz","Jeremy Doku","Morgan Rogers","Kaoru Mitoma","Antoine Semenyo","Elliot Anderson","Matheus Cunha","Bryan Mbeumo","Mohammed Kudus","Eberechi Eze","Anthony Gordon","Bruno Guimarães","Leandro Trossard","Gabriel Martinelli","Virgil van Dijk","Dominik Szoboszlai","Alexis Mac Allister","Ibrahima Konaté","Enzo Fernández","Gabriel Magalhães","Bruno Fernandes","Mohamed Salah","Joško Gvardiol","Viktor Gyökeres","Martin Ødegaard","Phil Foden","Moisés Caicedo","Alexander Isak","William Saliba","Rodri","Cole Palmer","Declan Rice","Florian Wirtz","Bukayo Saka","Erling Haaland"]},
+ irish:{label:"Irish legends",kit:["#169b62","#fff"],pool:["Daryl Murphy","Keith Andrews","Stephen Ward","Jeff Hendrick","Darron Gibson","Clinton Morrison","Stephen Hunt","Glenn Whelan","Jason McAteer","Matt Holland","Jon Walters","James McClean","Gary Kelly","Ian Harte","Kevin Kilbane","Shane Long","Robbie Brady","Stephen Ireland","Aiden McGeady","Evan Ferguson","Kenny Cunningham","Kevin Doyle","Andy Townsend","Mick McCarthy","Tony Cascarino","John O'Shea","Steve Finnan","Seamus Coleman","Ray Houghton","Ronnie Whelan","Richard Dunne","Wes Hoolahan","Caoimhín Kelleher","Niall Quinn","John Aldridge","Kevin Moran","Frank Stapleton","Steve Staunton","David O'Leary","Shay Given","Denis Irwin","Packie Bonner","Damien Duff","Robbie Keane","Johnny Giles","Liam Brady","Paul McGrath","Roy Keane"]},
+ legends:{label:"World legends",pool:["Michael Owen","Gary Lineker","David Beckham","Frank Lampard","Paul Scholes","Wayne Rooney","Alan Shearer","Steven Gerrard","Fernando Torres","David Villa","Wesley Sneijder","Gareth Bale","Didier Drogba","Eden Hazard","Sergio Agüero","Arjen Robben","Kenny Dalglish","Eric Cantona","Dennis Bergkamp","Francesco Totti","Alessandro Del Piero","Fabio Cannavaro","Carles Puyol","Roberto Carlos","Cafu","Rivaldo","Andrea Pirlo","Karim Benzema","Thierry Henry","Xavi","Andrés Iniesta","Kaká","Zlatan Ibrahimović","Luis Suárez","Robert Lewandowski","Sergio Ramos","Manuel Neuer","Lothar Matthäus","Gianluigi Buffon","Paolo Maldini","Luka Modrić","Bobby Charlton","George Best","Gerd Müller","Eusébio","Michel Platini","Marco van Basten","Neymar","Ronaldinho","Franz Beckenbauer","Johan Cruyff","Zinedine Zidane","Ronaldo Nazário","Pelé","Diego Maradona","Cristiano Ronaldo","Lionel Messi"]},
+ mufclb:{label:"Man Utd left-backs",kit:["#da291c","#fff"],pool:["Danny Higginbotham","Cameron Borthwick-Jackson","Tyler Blackett","Alexander Büttner","Kieran Richardson","Phil Bardsley","Timothy Fosu-Mensah","Brandon Williams","Sergio Reguilón","Tyrell Malacia","Ashley Grimes","Colin Gibson","Ayden Heaven","Fábio da Silva","Lee Martin","Mal Donaghy","Clayton Blackmore","Mike Duxbury","Quinton Fortune","Aaron Wan-Bissaka","Ashley Young","Matteo Darmian","Victor Lindelöf","Marcos Rojo","Alex Telles","Harry Amass","Noussair Mazraoui","Patrick Dorgu","Diogo Dalot","Rafael","Lee Sharpe","Phil Neville","Jonny Evans","Stewart Houston","John O'Shea","Lisandro Martínez","Daley Blind","Mikaël Silvestre","Gabriel Heinze","Arthur Albiston","Luke Shaw","Patrice Evra","Denis Irwin"]},
+ custom:{label:"My own list",pool:[]}
+};
+const NOTES={"Denis Irwin":"Mr Reliable. The jackpot!","Patrice Evra":"Listen!","Luke Shaw":"Still holding the fort.","Lee Martin":"1990 FA Cup final winner.","Arthur Albiston":"A true club servant.","Alexander Büttner":"Two goals on debut, mind.","Gabriel Heinze":"Hard as nails.","Daley Blind":"Never misplaced a pass.","Diogo Dalot":"Always in the game. Always.","Lamine Yamal":"The top prize!","Erling Haaland":"The Terminator.","Kylian Mbappé":"Galáctico.","Jude Bellingham":"Hey Jude.","Cole Palmer":"Cold. Very cold.","Bukayo Saka":"Starboy.","Mohamed Salah":"The Egyptian King.","Roy Keane":"Saipan who?","Paul McGrath":"Ooh Aah Paul McGrath!","Robbie Keane":"Cartwheel incoming.","Lionel Messi":"The GOAT.","Cristiano Ronaldo":"SIUUU!","Diego Maradona":"Hand of God.","Zinedine Zidane":"Pure elegance.","Packie Bonner":"Italia '90 hero."};
+const DIFF={generous:{label:"Generous",adj:.18},normal:{label:"Normal",adj:0},ruthless:{label:"Ruthless",adj:-.2}};
+const ROUNDS=[5,3,3,3,3,3];
+const FACTORS=[0.35,0.5,0.62,0.74,0.86,0.96];
+
+let S={};
+// ---------- Secret Dalot mode: #dalot link, or tap the title 3 times (remembered on this phone) ----------
+// A phone's own setting (3 taps) always wins: "1" = rigged, "0" = never rigged.
+let RIGGED=false,DALOT_PREF=null;
+try{DALOT_PREF=localStorage.getItem("dond_dalot")}catch(e){}
+RIGGED=false; // clean version: never rigged
+// Location check by IP (Manchester or Dublin). Only works when the game is hosted on your own site;
+// where outside requests are blocked it fails quietly and the game plays normally.
+const GEO_MATCH=[
+  {cc:"GB",re:/manchester|salford|stockport|trafford|stretford|bolton|oldham|rochdale|wigan|bury|tameside|ashton|altrincham|\bsale\b|urmston|eccles/i},
+  {cc:"IE",re:/dublin|d[uú]n laoghaire|swords|tallaght|blanchardstown|lucan|clondalkin|fingal|malahide|howth|dundrum/i}];
+const BUILD="v24 (location check)";
+const GEO={status:"not checked yet",log:[]};
+async function geoCheck(){return; // clean version: no location lookup
+
+  if(DALOT_PREF==="0"){GEO.status="skipped: Dalot mode switched OFF on this phone (3 taps)";return}
+  if(RIGGED){GEO.status="skipped: already rigged on this phone";return}
+  GEO.status="checking…";
+  const sources=[
+    ["geojs","https://get.geojs.io/v1/ip/geo.json",j=>({cc:j.country_code,city:j.city,region:j.region})],
+    ["ipwho.is","https://ipwho.is/",j=>({cc:j.country_code,city:j.city,region:j.region})],
+    ["ipapi.co","https://ipapi.co/json/",j=>({cc:j.country_code||j.country,city:j.city,region:j.region})]];
+  for(const [name,url,read] of sources){
+    try{
+      const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),6000);
+      const r=await fetch(url,{signal:ctl.signal,cache:"no-store"});clearTimeout(to);
+      if(!r.ok){GEO.log.push(`${name}: HTTP ${r.status}`);continue}
+      const g=read(await r.json());
+      if(!g.cc){GEO.log.push(`${name}: no location in reply`);continue}
+      const place=`${g.city||""} ${g.region||""}`;
+      const hit=GEO_MATCH.some(m=>m.cc===g.cc&&m.re.test(place));
+      GEO.log.push(`${name}: ${g.city||"?"}, ${g.region||"?"}, ${g.cc}`);
+      GEO.status=hit?"MATCH → rigged for Dalot":"no match → normal game";
+      if(hit){RIGGED=true;riggedSign();if(S&&S.boxes&&S.mine===null)S.rigged=true}
+      return;
+    }catch(e){GEO.log.push(`${name}: blocked or failed (${e.name||"error"})`)}
+  }
+  GEO.status="all lookups failed → normal game (a content/ad blocker may be stopping them)";
+}
+function showDiag(){
+  let pref="not set";try{pref=localStorage.getItem("dond_dalot")??"not set"}catch(e){pref="storage blocked"}
+  showModal(`<div class="pname" style="font-size:24px">🔧 Check</div>
+    <div class="recap" style="font-family:monospace;font-size:13px">
+      <div><span>Version</span><span>${BUILD}</span></div>
+      <div><span>Rigged now</span><span>${RIGGED?"YES":"no"}</span></div>
+      <div><span>Phone setting</span><span>${pref==="1"?"ON":pref==="0"?"OFF":pref}</span></div>
+      <div><span>Location</span><span>${GEO.status}</span></div>
+      ${GEO.log.map(l=>`<div><span></span><span>${l}</span></div>`).join("")}
+      <div><span>Page address</span><span>${location.host||"local file"}</span></div>
+    </div>
+    <div class="row"><button class="btn ghost" onclick="try{localStorage.removeItem('dond_dalot')}catch(e){};location.reload()">Reset phone setting</button>
+    <button class="btn" onclick="closeModal()">Close</button></div>`);
+}
+function riggedSign(){const s=document.querySelector(".sub");if(s)s.textContent="⚽ Football Edition ⚽"+(RIGGED?".":"")}
+
+const $=id=>document.getElementById(id);
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+
+
+const KITS={ // [shirt colour, number colour]
+ "Chris Wood":["#dd0000","#fff"],"Dominic Calvert-Lewin":["#ffffff","#1d428a"],"Jarrod Bowen":["#7a263a","#1bb1e7"],
+ "Jordan Pickford":["#003399","#fff"],"Ollie Watkins":["#670e36","#95bfe5"],"Evan Ferguson":["#8e1f2f","#f0bc42"],
+ "Caoimhín Kelleher":["#e30613","#fff"],"Kevin De Bruyne":["#12a0d7","#fff"],"Virgil van Dijk":["#c8102e","#fff"],
+ "Mohamed Salah":["#c8102e","#fff"],"Bruno Fernandes":["#da291c","#fff"],"Alexander Isak":["#c8102e","#fff"],
+ "Martin Ødegaard":["#ef0107","#fff"],"Cole Palmer":["#034694","#fff"],"Declan Rice":["#ef0107","#fff"],
+ "Florian Wirtz":["#c8102e","#fff"],"Bukayo Saka":["#ef0107","#fff"],"Pedri":["#a50044","#edbb00"],
+ "Jude Bellingham":["#ffffff","#00529f"],"Erling Haaland":["#6cabdd","#1c2c5b"],"Kylian Mbappé":["#ffffff","#00529f"],
+ "Lamine Yamal":["#a50044","#edbb00"],
+ "Jadon Sancho":["#670e36","#95bfe5"],"Raheem Sterling":["#034694","#fff"],"Mason Mount":["#da291c","#fff"],
+ "Luka Modrić":["#fb090b","#000"],"Nathan Collins":["#e30613","#fff"],"Marcus Rashford":["#a50044","#edbb00"],
+ "Jack Grealish":["#003399","#fff"],"Rasmus Højlund":["#12a0d7","#fff"],"Son Heung-min":["#000000","#c39e6d"],
+ "Kai Havertz":["#ef0107","#fff"],"Joško Gvardiol":["#6cabdd","#1c2c5b"],"Viktor Gyökeres":["#ef0107","#fff"],
+ "Phil Foden":["#6cabdd","#1c2c5b"],"Trent Alexander-Arnold":["#ffffff","#00529f"],"Rodri":["#6cabdd","#1c2c5b"],
+ "Michael Olise":["#dc052d","#fff"],"Raphinha":["#a50044","#edbb00"],"Harry Kane":["#dc052d","#fff"],
+ "Jamal Musiala":["#dc052d","#fff"],"Vinícius Júnior":["#ffffff","#00529f"]
+};
+function kit(name,num){const [c,t]=KITS[name]||["#334155","#fff"];
+  return `<svg class="shirt" viewBox="0 0 100 100"><path d="M30 10 L42 6 Q50 14 58 6 L70 10 L92 26 L82 42 L72 36 L72 94 L28 94 L28 36 L18 42 L8 26 Z" fill="${c}" stroke="${c==='#ffffff'?'#94a3b8':'#fff'}" stroke-width="3"/><text x="50" y="72" text-anchor="middle" font-family="Anton,sans-serif" font-size="30" fill="${t}">${num}</text></svg>`;}
+
+// ---------- Sound (synthesised, no files) ----------
+let AC=null,MUTED=false;
+try{MUTED=localStorage.getItem("dond_muted")==="1"}catch(e){}
+function ac(){if(MUTED)return null;try{if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume();return AC}catch(e){return null}}
+function tone(f,dur,type="sine",vol=.2,when=0,slideTo=null){const a=ac();if(!a)return;const t=a.currentTime+when;
+  const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(slideTo)o.frequency.exponentialRampToValueAtTime(slideTo,t+dur);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.02);g.gain.exponentialRampToValueAtTime(.001,t+dur);o.connect(g).connect(a.destination);o.start(t);o.stop(t+dur+.05)}
+function noise(dur,{vol=.3,when=0,type="bandpass",f=1000,f2=null,q=1,attack=.02}={}){const a=ac();if(!a)return;const t=a.currentTime+when;
+  const b=a.createBuffer(1,a.sampleRate*dur,a.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  const s=a.createBufferSource();s.buffer=b;const fl=a.createBiquadFilter();fl.type=type;fl.frequency.setValueAtTime(f,t);if(f2)fl.frequency.exponentialRampToValueAtTime(f2,t+dur);fl.Q.value=q;
+  const g=a.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+attack);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  s.connect(fl).connect(g).connect(a.destination);s.start(t)}
+// ---------- Stadium crowd ambience ----------
+let CROWD=null;
+function startCrowd(){
+  if(CROWD){CROWD.g.gain.setTargetAtTime(MUTED?0:.07,AC.currentTime,.5);return}
+  const a=ac();if(!a)return;
+  const len=a.sampleRate*6,buf=a.createBuffer(2,len,a.sampleRate);
+  for(let c=0;c<2;c++){const d=buf.getChannelData(c);let last=0;for(let i=0;i<len;i++){last=last*.6+(Math.random()*2-1)*.4;d[i]=last}}
+  const src=a.createBufferSource();src.buffer=buf;src.loop=true;
+  const f1=a.createBiquadFilter();f1.type="bandpass";f1.frequency.value=550;f1.Q.value=.6;
+  const f2=a.createBiquadFilter();f2.type="lowpass";f2.frequency.value=1800;
+  const g=a.createGain();g.gain.value=0;
+  const lfo=a.createOscillator(),lg=a.createGain();lfo.frequency.value=.13;lg.gain.value=.025;lfo.connect(lg).connect(g.gain);
+  src.connect(f1).connect(f2).connect(g).connect(a.destination);src.start();lfo.start();
+  g.gain.setTargetAtTime(.07,a.currentTime,1.5);
+  CROWD={g};
+}
+function crowdLevel(on){try{if(CROWD)CROWD.g.gain.setTargetAtTime(on?.07:0,AC.currentTime,.3)}catch(e){}}
+function introLine(){
+  const t=S.theme;
+  const what=t==="mufclb"?"the Manchester United left-back special":t==="irish"?"the Irish legends special":t==="legends"?"the world legends special":t==="prem"?"the Premier League special":t==="custom"?"a very special squad tonight":"the current stars special";
+  return pick([`Good evening, and welcome to Old Trafford for Deal or No Deal, ${what}! Twenty-two boxes, one Gaffer, and a full house. Let's get this started!`,
+    `What an atmosphere here tonight! It's Deal or No Deal, ${what}. The Gaffer's in his office, the boxes are sealed. Pick your box!`,
+    `Welcome to the Theatre of Dreams! Tonight, Deal or No Deal, ${what}. Will you beat the Gaffer? Let's find out!`]);
+}
+
+function buzz(p){if(MUTED)return;try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
+const SFX={
+  hairdryer(){noise(2.4,{vol:.5,f:900,f2:2600,q:.6,attack:.08});noise(2.4,{vol:.25,type:"highpass",f:4000,attack:.08});tone(110,2.2,"sawtooth",.08,0,140)},
+  ring(){for(let k=0;k<2;k++){for(let i=0;i<8;i++){tone(440,.05,"sine",.15,k*.9+i*.05);tone(480,.05,"sine",.15,k*.9+i*.05)}}},
+  tick(){for(let i=0;i<10;i++)noise(.06,{vol:.25,when:i*.11,f:180,q:2,attack:.003})},
+  cheer(){noise(2.2,{vol:.35,f:900,f2:1800,q:.7,attack:.25});noise(1.8,{vol:.2,when:.2,f:2500,q:1,attack:.2});[0,.15,.3].forEach(w=>noise(.08,{vol:.3,when:.4+w*2,type:"highpass",f:3000}))},
+  groan(){noise(1.8,{vol:.4,f:700,f2:220,q:1.5,attack:.15});tone(220,1.6,"sawtooth",.04,0,110)},
+  whoosh(){noise(.4,{vol:.25,f:400,f2:3000,q:1})},
+  drumroll(sec){const n=Math.floor(sec/.05);for(let i=0;i<n;i++)noise(.05,{vol:.12+.25*i/n,when:i*.05,f:200,q:1.5,attack:.003})},
+  crash(){noise(2.5,{vol:.45,type:"highpass",f:5000,attack:.005});tone(80,.4,"sine",.5)},
+  fanfare(){[523,659,784,1047].forEach((f,i)=>tone(f,.35,"triangle",.18,i*.14));tone(1047,1,"triangle",.18,.56)},
+  sad(){[392,370,349,330].forEach((f,i)=>tone(f,.45,"triangle",.15,i*.35))}
+};
+$("muteBtn").textContent=MUTED?"🔇":"🔊";
+riggedSign();
+let TV=false;try{TV=localStorage.getItem("dond_tv")==="1"}catch(e){}
+document.body.classList.toggle("tv",TV);
+$("tvBtn").onclick=()=>{TV=!TV;document.body.classList.toggle("tv",TV);try{localStorage.setItem("dond_tv",TV?"1":"0")}catch(e){}};
+$("muteBtn").onclick=()=>{MUTED=!MUTED;crowdLevel(!MUTED);if(!MUTED&&S.boxes)startCrowd();try{if(MUTED)speechSynthesis.cancel()}catch(e){}$("muteBtn").textContent=MUTED?"🔇":"🔊";try{localStorage.setItem("dond_muted",MUTED?"1":"0")}catch(e){}};
+
+function confetti(){const cols=["#f5c542","#e5484d","#3b82f6","#22c55e","#fff"];
+  for(let i=0;i<90;i++){const c=document.createElement("div");c.className="confetti";c.style.left=Math.random()*100+"vw";
+    c.style.background=cols[i%cols.length];c.style.animationDuration=(2+Math.random()*2)+"s";c.style.animationDelay=Math.random()*.6+"s";
+    document.body.appendChild(c);setTimeout(()=>c.remove(),5000)}}
+
+
+const COUNTRY={"Wayne Rooney":"ENG","Frank Lampard":"ENG","Steven Gerrard":"ENG","Michael Owen":"ENG","David Beckham":"ENG","Paul Scholes":"ENG","Didier Drogba":"CIV","Andrea Pirlo":"ITA","Gianluigi Buffon":"ITA","Paolo Maldini":"ITA","Francesco Totti":"ITA","Alessandro Del Piero":"ITA","Fabio Cannavaro":"ITA","Thierry Henry":"FRA","Zinedine Zidane":"FRA","Karim Benzema":"FRA","Xavi":"ESP","Andrés Iniesta":"ESP","Fernando Torres":"ESP","David Villa":"ESP","Carles Puyol":"ESP","Sergio Ramos":"ESP","Kaká":"BRA","Neymar":"BRA","Ronaldinho":"BRA","Ronaldo Nazário":"BRA","Roberto Carlos":"BRA","Cafu":"BRA","Rivaldo":"BRA","Zlatan Ibrahimović":"SWE","Luis Suárez":"URU","Robert Lewandowski":"POL","Diego Maradona":"ARG","Lionel Messi":"ARG","Sergio Agüero":"ARG","Cristiano Ronaldo":"POR","Wesley Sneijder":"NED","Arjen Robben":"NED","Gareth Bale":"WAL","Eden Hazard":"BEL","Manuel Neuer":"GER","Luka Modrić":"CRO","Gary Lineker":"ENG","Alan Shearer":"ENG","Bobby Charlton":"ENG","Kenny Dalglish":"SCO","George Best":"NIR","Eric Cantona":"FRA","Michel Platini":"FRA","Dennis Bergkamp":"NED","Marco van Basten":"NED","Johan Cruyff":"NED","Lothar Matthäus":"GER","Gerd Müller":"GER","Franz Beckenbauer":"GER","Eusébio":"POR","Pelé":"BRA"};
+const NATION={ENG:["#ffffff","#cf081f"],CIV:["#f77f00","#fff"],ITA:["#0064aa","#fff"],FRA:["#002395","#fff"],ESP:["#c60b1e","#ffc400"],BRA:["#ffdc02","#009b3a"],SWE:["#fecc02","#006aa7"],URU:["#7ab2e1","#000"],POL:["#ffffff","#dc143c"],ARG:["#75aadb","#fff"],POR:["#a6192e","#fff"],NED:["#f36c21","#fff"],WAL:["#c8102e","#fff"],BEL:["#e30613","#fff"],GER:["#ffffff","#000"],CRO:["#ff0000","#fff"],SCO:["#1c2a5c","#fff"],NIR:["#00843d","#fff"]};
+const MORE_KITS={"Diogo Dalot":["#da291c","#fff"],"Morgan Rogers":["#670e36","#95bfe5"],"Kaoru Mitoma":["#0057b8","#fff"],"Bruno Guimarães":["#241f20","#fff"],"Bryan Mbeumo":["#da291c","#fff"],"Moisés Caicedo":["#034694","#fff"],"William Saliba":["#ef0107","#fff"],"Antoine Semenyo":["#da291c","#000"],"Elliot Anderson":["#dd0000","#fff"],"Matheus Cunha":["#da291c","#fff"],"Eberechi Eze":["#ef0107","#fff"],"Dominik Szoboszlai":["#c8102e","#fff"],"Enzo Fernández":["#034694","#fff"],"Gabriel Magalhães":["#ef0107","#fff"],"Alexis Mac Allister":["#c8102e","#fff"],"Jarrell Quansah":["#e32221","#000"],"Ibrahima Konaté":["#c8102e","#fff"],"Gabriel Martinelli":["#ef0107","#fff"]};
+function kitColours(name){
+  if(S.theme&&THEMES[S.theme].kit) return THEMES[S.theme].kit;
+  if(S.theme==="legends"&&COUNTRY[name]) return NATION[COUNTRY[name]];
+  if(S.theme==="custom"||!(MORE_KITS[name]||KITS[name])){const p=["#e11d48","#2563eb","#16a34a","#f59e0b","#7c3aed","#0891b2","#111827","#f97316"];let h=0;for(const c of name)h=(h*31+c.charCodeAt(0))>>>0;return [p[h%p.length],"#fff"]}
+  return MORE_KITS[name]||KITS[name]||["#334155","#fff"];
+}
+function kit(name,num){const [c,t]=kitColours(name);
+  return `<svg class="shirt" viewBox="0 0 100 100"><path d="M30 10 L42 6 Q50 14 58 6 L70 10 L92 26 L82 42 L72 36 L72 94 L28 94 L28 36 L18 42 L8 26 Z" fill="${c}" stroke="${c==='#ffffff'?'#94a3b8':'#fff'}" stroke-width="3"/><text x="50" y="72" text-anchor="middle" font-family="Anton,sans-serif" font-size="30" fill="${t}">${num}</text></svg>`;}
+const mystery=()=>`<svg class="shirt" viewBox="0 0 100 100"><rect x="10" y="24" width="80" height="56" rx="6" fill="#f5c542" stroke="#7a5a00" stroke-width="3"/><path d="M10 26 L50 56 L90 26" fill="none" stroke="#7a5a00" stroke-width="3"/><text x="50" y="76" text-anchor="middle" font-family="Anton" font-size="22" fill="#7a5a00">?</text></svg>`;
+
+// ===== Setup UI =====
+let THEME="mufclb",DIFFK="normal";
+function chips(el,obj,cur,on){$(el).innerHTML=Object.entries(obj).map(([k,v])=>`<button class="chip ${k===cur?'on':''}" data-k="${k}">${v.label}</button>`).join("");
+  $(el).querySelectorAll(".chip").forEach(b=>b.onclick=()=>{on(b.dataset.k);chips(el,obj,b.dataset.k,on)})}
+chips("themeChips",{mufclb:THEMES.mufclb,...THEMES},THEME,k=>{THEME=k;$("customWrap").style.display=k==="custom"?"block":"none"});
+chips("diffChips",DIFF,DIFFK,k=>DIFFK=k);
+const MODES={normal:{label:"Normal"},reverse:{label:"Reverse (worst wins)"}};let MODE="normal";
+chips("modeChips",MODES,MODE,k=>MODE=k);
+const BOARDS={open:{label:"Show names"},blind:{label:"Blind"}};let BOARD="blind";
+chips("boardChips",BOARDS,BOARD,k=>BOARD=k);
+const customNames=()=>$("custom").value.split("\n").map(s=>s.trim()).filter(Boolean);
+$("custom").oninput=()=>{const n=customNames().length;$("customCount").textContent=`${n} player${n===1?"":"s"}${n<28?` — need ${28-n} more`:" ✓"}`};
+
+const ALWAYS=["Diogo Dalot"]; // always put in a box when he's in the squad
+function buildSquad(theme){
+  // Build one ranked pool, then each game draws a fresh random line-up:
+  // the pool is split into 22 bands (weakest -> best) and one player per band goes in a box,
+  // so every game has different players but still a full range from duds to superstars.
+  let pool;
+  if(theme==="custom"){
+    const names=[...new Set(customNames())];if(names.length<28) return null;
+    pool=names.map((n,i)=>({name:n,score:1+99*i/(names.length-1)}));
+  } else {
+    const t=THEMES[theme].pool;
+    pool=t.map((n,i)=>({name:n,score:1+99*i/(t.length-1)}));
+  }
+  const N=pool.length,box=[],banker=[];
+  for(let k=0;k<22;k++){
+    const band=pool.slice(Math.floor(k*N/22),Math.floor((k+1)*N/22));
+    const forced=band.findIndex(p=>ALWAYS.includes(p.name));
+    const chosen=forced>=0?forced:Math.floor(Math.random()*band.length);
+    band.forEach((p,i)=>(i===chosen?box:banker).push(p));
+  }
+  return {items:box.map(p=>({name:p.name,score:p.score,note:NOTES[p.name]||""})),banker};
+}
+
+$("startBtn").onclick=()=>{
+  unlockSpeech();
+  const sq=buildSquad(THEME);
+  if(!sq){$("setupErr").textContent="Add at least 28 players to your list.";return}
+  $("setupErr").textContent="";
+  if(RIGGED){sq.banker=sq.banker.filter(p=>p.name!=="Diogo Dalot");
+    if(!sq.items.some(i=>i.name==="Diogo Dalot")){const k=10;sq.items[k]={name:"Diogo Dalot",score:sq.items[k].score,note:NOTES["Diogo Dalot"]||""}}}
+  if(MODE==="reverse"){sq.items.forEach(i=>i.score=101-i.score);sq.banker.forEach(p=>p.score=101-p.score)}
+  const name="You";
+  const holders=[];
+  const contents=shuffle([...sq.items.keys()]);
+  S={name,theme:THEME,rigged:RIGGED,blind:BOARD==='blind',reverse:MODE==='reverse',trivia:{right:0,asked:0},offerLog:[],hdRounds:shuffle([0,1,2,3,4,5]).slice(0,Math.random()<.5?1:2),diff:DIFF[DIFFK].adj,items:sq.items,banker:sq.banker,
+     boxes:contents.map((it,i)=>({n:i+1,it,open:false,holder:holders[i]||""})),
+     mine:null,round:0,openedThisRound:0,offers:[],offered:new Set(),roundLost:[],phoned:false,paused:false,dealt:null,busy:false,traded:false};
+  $("setup").classList.remove("on");$("game").classList.add("on");
+  SFX.whoosh();render();startCrowd();S.intro=introLine();setTimeout(()=>say(S.intro),600);
+  showModal(`<div style="font-size:40px">📦</div><div class="pname">Pick your box</div>
+   <div class="commentary">🎙️ ${S.intro}</div>
+   <p>Tap any box to make it yours.<br>${S.reverse?"<b>Reverse mode:</b> the worse the player, the better. ":""}${S.blind?"<b>Playing blind:</b> you won't know who's left until they're gone. There's a legend in here somewhere…":`The jackpot, ${S.items.slice().sort((a,b)=>b.score-a.score)[0].name}, is in here somewhere…`}</p>
+   <div class="row"><button class="btn" onclick="closeModal()">Let's go</button></div>`);
+};
+
+// ===== Game =====
+const itemOf=b=>S.items[b.it];
+function remaining(){return S.boxes.filter(b=>!b.open).map(b=>itemOf(b).score)}
+
+const TIERS=["Dud","Decent","Quality","Legend"];
+function tierOf(idx){ // by rank among the 22 players in play
+  const order=[...S.items.keys()].sort((a,b)=>S.items[a].score-S.items[b].score);
+  const r=order.indexOf(idx);return r<6?0:r<11?1:r<16?2:3;
+}
+function render(){
+  const openedSet=new Set(S.boxes.filter(b=>b.open).map(b=>b.it));
+  const order=[...S.items.keys()].sort((a,b)=>S.items[a].score-S.items[b].score);
+  const row=(i,c)=>{
+    const hide=S.blind&&!openedSet.has(i)&&!S.items[i].traded;
+    const label=hide?`??? <span class="tier t${tierOf(i)}">${TIERS[tierOf(i)]}</span>`:`${S.items[i].name}${S.items[i].traded?' 🔁':''}`;
+    return `<div class="val ${c} ${openedSet.has(i)?'out':''} ${S.items[i].traded?'traded':''}"><span>${label}</span>${eraBadge(S.items[i].name)}</div>`};
+  $("boardLo").innerHTML=order.slice(0,11).map(i=>row(i,"lo")).join("");
+  $("boardHi").innerHTML=order.slice(11).map(i=>row(i,"hi")).join("");
+  $("myBoxEl").innerHTML=S.mine===null?"?":`${S.mine+1}`;
+  $("boxes").innerHTML=S.boxes.map((b,i)=>{
+    if(i===S.mine) return "";
+    if(b.open) return `<div class="box opened">${itemOf(b).name}</div>`;
+    return `<div class="box" onclick="openBox(${i})">${b.n}<div class="holder">${b.holder}</div></div>`;
+  }).join("");
+  if(S.mine===null){$("status").innerHTML=`Tap a box to make it yours<small>22 boxes in play</small>`;$("offerHist").textContent="";return}
+  const left=ROUNDS[S.round]-S.openedThisRound;
+  $("status").innerHTML = S.round<ROUNDS.length
+    ? `Round ${S.round+1}: open ${left} more box${left===1?"":"es"}<small>${remaining().length} boxes left in play</small>`
+    : `Final decision`;
+  $("offerHist").textContent=S.offers.length?"Gaffer offered: "+S.offers.join(" → "):"";
+}
+
+function openBox(i){
+  if(S.busy) return;
+  if(S.mine===null){S.mine=i;SFX.whoosh();
+    if(S.rigged&&!S.items.some(x=>x.name==="Diogo Dalot")){S.items[10]={name:"Diogo Dalot",score:S.items[10].score,note:NOTES["Diogo Dalot"]||""}}
+    if(S.rigged){S.banker.forEach((p,k)=>{if(p.name==="Diogo Dalot")S.offered.add(k)})}
+    if(S.rigged){const dIdx=S.items.findIndex(x=>x.name==="Diogo Dalot");const holder=S.boxes.find(b=>b.it===dIdx);const t=S.boxes[i].it;S.boxes[i].it=dIdx;holder.it=t}
+    const b=S.boxes[i];
+    showModal(`<div class="bigbox">${b.n}</div><div class="pname">Box ${b.n} is yours</div>
+      <p>${b.holder?`${b.holder} hands it over. `:""}Now open the others — 5 to start.</p>
+      <div class="row"><button class="btn" onclick="closeModal();render()">Let's play</button></div>`);
+    render();return}
+  if(S.boxes[i].open||i===S.mine||S.round>=ROUNDS.length) return;
+  S.busy=true;
+  const b=S.boxes[i];
+  SFX.tick();
+  showModal(`<p>${b.holder?`<b>${b.holder}</b> opens`:"Opening"} box ${b.n}…</p><div class="bigbox shake">${b.n}</div>`);
+  setTimeout(()=>{
+    b.open=true;S.roundLost.push(b.it);
+    const it=itemOf(b);
+    const rank=[...remaining(),it.score].filter(s=>s>it.score).length;
+    const big=it.score>=55;
+    big?SFX.groan():SFX.cheer();if(big)buzz([200,100,200]);
+    S.lastLine=commentary(it);setTimeout(()=>say(S.lastLine),500);
+    showModal(`${kit(it.name,b.n)}
+      <div class="pname">${it.name}</div>${eraBadge(it.name)?`<div>${eraBadge(it.name)}</div>`:""}
+      <div class="pnote">${it.note}${it.traded?" (traded in by the Gaffer)":""}</div>
+      <div class="commentary">🎙️ ${S.lastLine}</div>
+      <div class="row"><button class="btn" onclick="maybeTrivia('${it.name.replace(/'/g,"\\'")}')">Continue</button></div>`);
+    render();
+  },1300);
+}
+
+function afterOpen(){
+  closeModal();S.busy=false;S.openedThisRound++;
+  if(S.dealt!==null){
+    if(S.openedThisRound>=ROUNDS[S.round]){S.round++;S.openedThisRound=0;S.roundLost=[]}
+    if(S.round>=ROUNDS.length) return finalReveal(false);
+    render();return;
+  }
+  if(S.openedThisRound>=ROUNDS[S.round]) bankerCall(); else render();
+}
+
+function bankerPick(target,filter=()=>true){
+  let best=null,bd=1e9;
+  S.banker.forEach((p,i)=>{ if(S.offered.has(i)||!filter(p)) return;
+    const d=Math.abs(p.score-target); if(d<bd){bd=d;best=i} });
+  if(best===null) return null;
+  S.offered.add(best); return S.banker[best];
+}
+
+function bankerCall(){
+  S.busy=true;render();
+  SFX.ring();
+  showModal(`<div class="phone">☎️</div><p>The Gaffer is on the phone…</p>`);
+  setTimeout(()=>{
+    const r=remaining();const ev=r.reduce((a,b)=>a+b,0)/r.length;
+    const isMystery=false;
+    const spread=isMystery?(0.55+Math.random()*0.85):(0.85+Math.random()*0.3);
+    const target=Math.max(1,ev*Math.min(1.1,FACTORS[S.round]+S.diff)*spread);
+    const offer=bankerPick(target);
+    const last=S.round===ROUNDS.length-1;
+    if(!offer){ // banker has run out of players
+      showModal(`<p>The Gaffer has no players left to offer!</p><div class="row"><button class="btn red" onclick="noDeal(${last})">Play on</button></div>`);return}
+    S.currentOffer=offer;S.currentMystery=isMystery;
+    S.offers.push(offer.name);S.offerLog.push({name:offer.name,score:offer.score,round:S.round+1});S.roundLost=[];
+    const taunt=bankerTaunt();
+    S.lastFlag=last;say(`The Gaffer offers you ${offer.name}. He says: ${taunt}`,{pitch:.6,rate:.95});
+    showModal(`<div style="font-size:34px">🧓</div><p>The Gaffer offers you</p>${kit(offer.name,"B")}
+        <div class="offer" style="font-size:38px">${offer.name}</div>
+        <div class="banker-say">🧓 "${taunt}"</div>
+        <div id="mateBox"></div>
+        <div class="timer"><div class="timer-fill" id="timerFill"></div></div><div class="tiny" id="timerTxt">10s to decide</div>
+        <div class="row"><button class="btn green" onclick="deal()">Deal</button><button class="btn red" onclick="noDeal(${last})">No Deal</button></div>
+        ${S.phoned?"":`<div class="row" style="margin-top:8px"><button class="btn ghost" id="phoneBtn" onclick="phoneMate()">📞 Phone a mate (once per game)</button></div>`}`);
+    startCountdown(10000);
+  },1600);
+}
+
+
+// ---------- Spoken commentary (browser text-to-speech) ----------
+let VOICE=null;
+function pickVoice(){try{const vs=speechSynthesis.getVoices();if(!vs.length)return;
+  const pref=["en-IE","en-GB","en-AU","en-US"];
+  for(const l of pref){const m=vs.filter(v=>v.lang&&v.lang.replace("_","-").startsWith(l));
+    if(m.length){VOICE=m.find(v=>/daniel|male|arthur|oliver|moira|google uk english male/i.test(v.name))||m[0];return}}
+  VOICE=vs[0]}catch(e){}}
+try{pickVoice();speechSynthesis.onvoiceschanged=pickVoice}catch(e){}
+function say(text,{pitch=1,rate=1.05,cut=true}={}){
+  return; // spoken voice switched off — commentary stays on screen
+  if(MUTED)return;try{
+    const clean=text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu,"").replace(/\s+/g," ").trim();
+    if(!clean)return;
+    if(cut)speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(clean);if(VOICE)u.voice=VOICE;u.lang=VOICE?VOICE.lang:"en-GB";
+    u.pitch=pitch;u.rate=rate;u.volume=1;speechSynthesis.speak(u);
+  }catch(e){}}
+function unlockSpeech(){try{const u=new SpeechSynthesisUtterance(" ");u.volume=0;speechSynthesis.speak(u)}catch(e){}}
+
+// ---------- Deal countdown ----------
+let TIMER=null;
+function startCountdown(ms){
+  stopCountdown();S.tLeft=ms;let last=Date.now(),lastSec=Math.ceil(ms/1000);
+  TIMER=setInterval(()=>{
+    if(S.paused){last=Date.now();return}
+    const now=Date.now();S.tLeft-=now-last;last=now;
+    const f=$("timerFill"),t=$("timerTxt");if(!f){stopCountdown();return}
+    const pct=Math.max(0,S.tLeft/ms*100);f.style.width=pct+"%";f.style.background=pct<30?"var(--red)":"var(--gold)";
+    const sec=Math.ceil(S.tLeft/1000);t.textContent=S.tLeft>0?`${sec}s to decide`:"Time's up!";
+    if(sec!==lastSec&&sec<=3&&sec>0){tone(880,.08,"square",.12);buzz(60)}lastSec=sec;
+    if(S.tLeft<=0){stopCountdown();tone(220,.5,"sawtooth",.15);
+      showModal(`<div style="font-size:40px">⏰</div><div class="pname">Too slow!</div><p>The Gaffer hangs up. That's a <b>No Deal</b>.</p>
+        <div class="row"><button class="btn red" onclick="noDeal(${S.lastFlag})">Continue</button></div>`)}
+  },100);
+}
+function stopCountdown(){if(TIMER){clearInterval(TIMER);TIMER=null}S.paused=false}
+
+// ---------- Phone a mate ----------
+function phoneMate(){
+  S.phoned=true;S.paused=true;
+  const holders=S.boxes.map(b=>b.holder).filter(Boolean);
+  const mate=holders.length?pick(holders):pick(["your Ma","Big Dave from work","the lad from the chipper","your uncle","your mate who 'played county'"]);
+  $("phoneBtn").parentElement.remove();
+  $("mateBox").innerHTML=`<div class="banker-say" style="border-color:#22c55e">📞 Ringing ${mate}…</div>`;
+  tone(440,.4,"sine",.1);tone(440,.4,"sine",.1,.6);
+  setTimeout(()=>{
+    const r=remaining();const ev=r.reduce((a,b)=>a+b,0)/r.length;
+    const good=S.currentOffer.score>=ev*0.9;          // honest read of the offer
+    const honest=Math.random()<0.7;                    // but mates aren't always reliable
+    const sayDeal=honest?good:!good;
+    const n=S.currentOffer.name.split(" ").slice(-1)[0];
+    const line=sayDeal
+      ?pick([`Take ${n}! Bite his hand off!`,`Deal, deal, DEAL. Don't be greedy.`,`I'd take that. ${n}'s a quality player.`,`Honestly? Take it and run.`])
+      :pick([`No chance! ${n}? You can do better than that.`,`No Deal. The Gaffer's at it.`,`I've a feeling about your box. Say no.`,`${n}?! Tell him to get lost.`]);
+    const wobble=Math.random()<0.25?pick([" …actually, I don't know. Sorry, I'm in the pub."," Then again, what do I know."," Anyway, the dinner's ready, bye!"]):"";
+    $("mateBox").innerHTML=`<div class="banker-say" style="border-color:#22c55e">📞 <b>${mate}</b>: "${line}${wobble}"</div>`;
+    say(line+wobble,{pitch:1.35,rate:1.1});
+    S.paused=false;
+  },1800);
+}
+
+// ---------- TV commentary ----------
+const UTD_LINES={
+ "Denis Irwin":["Denis Irwin! Mr Reliable, gone! That's the jackpot off the board!","Oh no, not Denis! The Stretford End is in bits!"],
+ "Patrice Evra":["Evra! Listen! That's a big one gone!","Patrice Evra off the board. Five titles' worth of left-back, gone."],
+ "Luke Shaw":["Luke Shaw out. At least he's not injured this time.","Shaw gone. Twelve years of service, off the board."],
+ "Arthur Albiston":["Albiston! A proper club servant off the board.","Arthur Albiston gone. The old-timers in the crowd are gutted."],
+ "Gabriel Heinze":["Heinze gone. He'd have run through a wall for you.","El Gringo off the board! That hurts."],
+ "Alexander Büttner":["Büttner! Two on his debut, but you'll not miss him!","Büttner! The Stretford End is bouncing!"],
+ "Diogo Dalot":["Dalot! Of course he's here. He's always here.","Dalot off the board! Wrong flank anyway, some would say."],
+ "Lee Martin":["Lee Martin! Cup final hero, but you'll cope.","Lee Martin! 1990 memories, but it's a good box to lose."],
+ "Sergio Reguilón":["Reguilón! Came on loan, gone like he came.","Reguilón out. Barely unpacked his bags."],
+ "Brandon Williams":["Brandon Williams! Get in! Board looking healthier.","Brandon Williams gone. Lovely stuff."],
+ "Daley Blind":["Daley Blind off the board. Never misplaced a pass, mind.","Blind gone. Classy, but you'll survive."],
+ "Stewart Houston":["Stewart Houston! A Docherty man from the seventies, off the board.","Houston, we have a problem! He's gone!"],
+ "Rafael":["Rafael gone! Wrong side for him anyway, he'd have flown into a tackle regardless.","Rafael off the board. One twin down."],
+ "Aaron Wan-Bissaka":["Wan-Bissaka on the left? Sure why not. Gone anyway.","The Spider off the board!"],
+ "Phil Neville":["Phil Neville! Played everywhere, and now he's gone from here too.","The other Neville off the board!"],
+ "Mikaël Silvestre":["Silvestre gone. A Fergie favourite, that's a blow.","Silvestre off the board. Hurts a bit, that."]
+};
+function commentary(it){
+  const s=it.score,n=it.name.split(" ").slice(-1)[0];
+  if(S.reverse){ // high score = gloriously bad player you wanted to keep
+    return pick(s>=70?[`Oh no! ${it.name}! You needed that calamity!`,`Disaster! ${n} was exactly the dud you wanted!`,`${n} gone! One of the true duds on the board, and you've lost him!`]
+      :s>=40?[`${n}. Mediocre, which is sort of what you wanted.`,`${n} off the board. Not bad enough to hurt.`]
+      :[`${it.name}! Get in! Far too good for this game!`,`${n} gone! Brilliant — he was much too good!`,`Quality player, ${n}. Exactly the box you wanted to open!`]);
+  }
+  if(S.theme==="mufclb"){
+    if(UTD_LINES[it.name]&&Math.random()<0.8) return pick(UTD_LINES[it.name]);
+    return pick(s>=85?[`Oh no! ${it.name}! The Stretford End can't believe it!`,`${n}, gone! Old Trafford goes silent!`]
+      :s>=55?[`${n} gone. Fergie would be fuming.`,`Ooh, ${n} off the board. That's a decent left-back lost.`]
+      :s>=30?[`${n}. Did a job. That's about it.`,`${n} off the board. Squad player, you'll cope.`]
+      :[`${n}! Get in! The Stretford End is bouncing!`,`${n} gone! That's one for the Old Trafford bloopers reel.`]);
+  }
+  const lines=s>=85?[`Oh no! ${it.name}! The crowd is stunned into silence!`,`That's a disaster! ${n}, gone. You could hear a pin drop.`,`Unbelievable! ${n} was the one you wanted to keep!`]
+    :s>=55?[`Ooh, that hurts. ${n} would've walked into any team.`,`A big name gone there. The Gaffer will be rubbing his hands.`,`${n} out of the running. That's a blow, no doubt about it.`]
+    :s>=30?[`${n}. Decent player, but you'll survive that one.`,`Solid pro, ${n}. Not a disaster, not a celebration.`,`${n} off the board. Steady as she goes.`]
+    :[`${n}! Get in! That's exactly the box you wanted to open!`,`And it's ${n}! The crowd goes wild!`,`Lovely stuff. ${n} gone — the board's looking healthier.`];
+  return pick(lines);
+}
+
+// ---------- Era badges (Man Utd left-backs) ----------
+const ERAS={s70:["'70s","#a3a3a3"],s80:["'80s","#fbbf24"],f90:["Fergie '90s","#f87171"],f00:["Fergie '00s","#fb923c"],post:["Post-Fergie","#60a5fa"]};
+const ERA_OF={"Stewart Houston":"s70","Arthur Albiston":"s80","Ashley Grimes":"s80","Mike Duxbury":"s80","Colin Gibson":"s80","Mal Donaghy":"s80",
+ "Clayton Blackmore":"f90","Lee Martin":"f90","Lee Sharpe":"f90","Denis Irwin":"f90","Phil Neville":"f90","Danny Higginbotham":"f90",
+ "Quinton Fortune":"f00","Mikaël Silvestre":"f00","John O'Shea":"f00","Kieran Richardson":"f00","Gabriel Heinze":"f00","Patrice Evra":"f00","Phil Bardsley":"f00","Fábio da Silva":"f00","Rafael":"f00","Jonny Evans":"f00","Alexander Büttner":"f00"};
+function eraBadge(name){return""; // era tags switched off
+  if(S.theme!=="mufclb")return"";const e=ERAS[ERA_OF[name]||"post"];return `<span class="era" style="background:${e[1]}">${e[0]}</span>`}
+
+// ---------- Trivia bonus (Man Utd left-backs) ----------
+const TRIVIA={
+ "Denis Irwin":["Which club did United sign Denis Irwin from?","Oldham Athletic",["Leeds United","Cork City"]],
+ "Patrice Evra":["Which club did United sign Patrice Evra from?","Monaco",["Marseille","Lyon"]],
+ "Luke Shaw":["Which club did United sign Luke Shaw from?","Southampton",["Chelsea","Everton"]],
+ "Gabriel Heinze":["Which club did Heinze join when he left United?","Real Madrid",["Liverpool","Inter Milan"]],
+ "Mikaël Silvestre":["Which club did United sign Silvestre from?","Inter Milan",["Rennes","Arsenal"]],
+ "Alex Telles":["Which club did United sign Alex Telles from?","Porto",["Galatasaray","Benfica"]],
+ "Daley Blind":["Which club did United sign Daley Blind from?","Ajax",["PSV","Feyenoord"]],
+ "Marcos Rojo":["Which country did Marcos Rojo play for?","Argentina",["Uruguay","Spain"]],
+ "Sergio Reguilón":["Which club loaned Reguilón to United?","Tottenham",["Real Madrid","Atlético Madrid"]],
+ "Tyrell Malacia":["Which club did United sign Tyrell Malacia from?","Feyenoord",["Ajax","AZ Alkmaar"]],
+ "Patrick Dorgu":["Which club did United sign Patrick Dorgu from?","Lecce",["Udinese","Copenhagen"]],
+ "Noussair Mazraoui":["Which club did United sign Mazraoui from?","Bayern Munich",["Ajax","Borussia Dortmund"]],
+ "Lisandro Martínez":["Which club did United sign Lisandro Martínez from?","Ajax",["River Plate","Boca Juniors"]],
+ "Diogo Dalot":["Which club did United sign Diogo Dalot from?","Porto",["Benfica","Sporting"]],
+ "Alexander Büttner":["Which club did United sign Büttner from?","Vitesse",["Ajax","Twente"]],
+ "Fábio da Silva":["What's the name of Fábio's twin brother, also at United?","Rafael",["Rodrigo","Fernando"]],
+ "Ashley Young":["Which club did United sign Ashley Young from?","Aston Villa",["Watford","Everton"]],
+ "Matteo Darmian":["Which club did United sign Matteo Darmian from?","Torino",["AC Milan","Napoli"]],
+ "Quinton Fortune":["Which country did Quinton Fortune play for?","South Africa",["Nigeria","Ghana"]],
+ "Arthur Albiston":["Which country did Arthur Albiston play for?","Scotland",["England","Wales"]],
+ "Clayton Blackmore":["Which country did Clayton Blackmore play for?","Wales",["Scotland","Northern Ireland"]],
+ "Lee Martin":["Who did Lee Martin score the 1990 FA Cup final replay winner against?","Crystal Palace",["Everton","Nottingham Forest"]],
+ "Phil Neville":["Phil Neville's brother Gary also played for United — what position?","Right-back",["Centre-back","Midfield"]],
+ "John O'Shea":["Which country did John O'Shea play for?","Ireland",["Northern Ireland","Scotland"]],
+ "Colin Gibson":["Which club did United sign Colin Gibson from?","Aston Villa",["Wolves","Leeds United"]],
+ "Lee Sharpe":["Which club did United sign Lee Sharpe from?","Torquay United",["Plymouth Argyle","Exeter City"]],
+ "Stewart Houston":["Houston missed the 1977 FA Cup final through injury. Who replaced him?","Arthur Albiston",["Jimmy Nicholl","Brian Greenhoff"]],
+ "Rafael":["What's the name of Rafael's twin brother, also at United?","Fábio",["Felipe","Rodrigo"]],
+ "Aaron Wan-Bissaka":["Which club did United sign Wan-Bissaka from?","Crystal Palace",["West Ham","Fulham"]],
+ "Victor Lindelöf":["Which club did United sign Victor Lindelöf from?","Benfica",["Porto","Ajax"]],
+ "Jonny Evans":["Which country did Jonny Evans play for?","Northern Ireland",["Ireland","Scotland"]],
+ "Mal Donaghy":["Which country did Mal Donaghy play for?","Northern Ireland",["Ireland","Wales"]]
+};
+function maybeTrivia(name){
+  const q=TRIVIA[name];
+  if(S.theme!=="mufclb"||!q||Math.random()>0.4){afterOpen();return}
+  closeModal();S.busy=true;
+  const opts=shuffle([q[1],...q[2]]);
+  S.triviaAns=q[1];
+  showModal(`<div style="font-size:34px">❓</div><div class="pname" style="font-size:24px">Trivia bonus</div>
+    <p style="font-weight:700">${q[0]}</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">${opts.map(o=>`<button class="btn ghost" onclick="answerTrivia(this,'${o.replace(/'/g,"\\'")}')">${o}</button>`).join("")}</div>
+    <div class="tiny">Just for bragging rights — score so far ${S.trivia.right}/${S.trivia.asked}</div>`);
+  say(q[0]);
+}
+function answerTrivia(btn,o){
+  S.trivia.asked++;const ok=o===S.triviaAns;if(ok)S.trivia.right++;
+  ok?(SFX.cheer(),say("Correct! Well done.")):(SFX.groan(),say(`No! It was ${S.triviaAns}.`));
+  showModal(`<div style="font-size:44px">${ok?"✅":"❌"}</div><div class="pname">${ok?"Correct!":"Wrong!"}</div>
+    <p>${ok?"":`It was <b>${S.triviaAns}</b>. `}Trivia score: ${S.trivia.right}/${S.trivia.asked}</p>
+    <div class="row"><button class="btn" onclick="S.busy=false;afterOpen()">Continue</button></div>`);
+}
+
+function bankerTaunt(){
+  const gone=S.roundLost.slice().sort((a,b)=>S.items[b].score-S.items[a].score);
+  const surname=i=>S.items[i].name.split(" ").slice(-1)[0];
+  if(gone.length&&S.items[gone[0]].score>=55){const n=surname(gone[0]);
+    return pick([`${n}'s gone, son. Bad night for you.`,`Did you just knock out ${n}? I'm laughing up here.`,`Bye bye ${n}. My offer's coming down.`,`${n} out. You couldn't pick a box in a box factory.`]);}
+  if(gone.length&&gone.every(i=>S.items[i].score<40))
+    return pick(["You're playing well. Too well. I don't like it.","All the duds gone… you've got me sweating.","Fair play. Let's see if your nerve holds."]);
+  return pick(["Mixed round. I've seen worse. Not much worse, mind.","I know what's in your box. Do you?","Take my offer and go home happy."]);
+}
+
+function deal(){
+  stopCountdown();
+  S.dealt=S.currentOffer;S.busy=false;
+  if(S.currentMystery){
+    S.offers[S.offers.length-1]=`✉️ ${S.dealt.name}`;
+    SFX.drumroll(1.8);
+    showModal(`<div style="font-size:44px">🤝</div><div class="pname">DEAL!</div><p>Opening the envelope…</p><div class="shake">${mystery()}</div>`);
+    setTimeout(()=>{SFX.crash();setTimeout(()=>SFX.cheer(),200);dealDone(true)},1900);
+  } else {SFX.cheer();dealDone(false)}
+}
+function dealDone(wasMystery){
+  if(S.rigged){
+    S.dealtOriginal=S.dealt;
+    const dalot=S.items.find(x=>x.name==="Diogo Dalot");
+    showModal(`<div style="font-size:44px">🤝</div><div class="pname">DEAL!</div><p>You sign <b>${S.dealt.name}</b>…</p>`);
+    setTimeout(()=>{
+      SFX.ring();buzz([100,50,100]);
+      showModal(`<div class="phone">☎️</div><div class="pname" style="color:var(--red)">HOLD ON…</div>
+        <p>Breaking news: <b>${S.dealtOriginal.name}</b> has failed his medical! The deal is off.</p>
+        <p>The Gaffer's sending you someone else instead…</p>
+        <div class="slowmo">${kit("Diogo Dalot","D")}</div><div class="pname">Diogo Dalot</div>
+        <div class="banker-say">🧓 "Take it or leave it. Actually, just take it."</div>
+        <div class="row"><button class="btn" onclick="playOn()">Play on</button>
+        <button class="btn ghost" onclick="finalReveal(true)">Just open my box</button></div>`);
+      S.dealt=dalot;render();
+    },2200);
+    return;
+  }
+  showModal(`<div style="font-size:44px">🤝</div><div class="pname">DEAL!</div>
+    ${wasMystery?`<div class="slowmo">${kit(S.dealt.name,"B")}</div>`:""}
+    <p>You sign <b>${S.dealt.name}</b>${wasMystery?" from the envelope":""}.</p>
+    <p>Want to see what would have happened?</p>
+    <div class="row"><button class="btn" onclick="playOn()">Play on</button>
+    <button class="btn ghost" onclick="finalReveal(true)">Just open my box</button></div>`);
+  render();
+}
+function playOn(){closeModal();S.round++;S.openedThisRound=0;
+  if(S.round>=ROUNDS.length) return finalReveal(false);
+  render();$("status").innerHTML+=`<small>Deal done for ${S.dealt.name} — playing on for fun</small>`;}
+
+function noDeal(last){
+  stopCountdown();
+  if(S.hdRounds.includes(S.round)){S.busy=true;hairdryer(()=>noDealContinue(last))}
+  else noDealContinue(last);
+}
+function hairdryer(next){
+  const rant=pick(["NO DEAL?! Are you having a laugh, son?!","Get out of my office! Out!","I offer you a good player and you throw it back in my face?!","That's the worst decision I've seen in forty years of football!","You'll be in the reserves on Monday, mark my words!","Who do you think you are?! I've won more trophies than you've had hot dinners!","I've seen better decisions from the tea lady!"]);
+  SFX.hairdryer();buzz([100,50,100,50,300]);
+  showModal(`<div class="hairdryer"><div style="font-size:54px">😤💨</div><div class="pname" style="color:var(--red)">THE HAIRDRYER</div>
+    <div class="banker-say" style="border-color:var(--red);font-size:18px">🧓 "${rant}"</div>
+    <div class="row"><button class="btn red" id="hdBtn">Sorry, Gaffer</button></div></div>`);
+  say(rant,{pitch:.55,rate:1.15});
+  let done=false;const go=()=>{if(done)return;done=true;try{speechSynthesis.cancel()}catch(e){}next()};
+  $("hdBtn").onclick=go;setTimeout(go,4200);
+}
+function noDealContinue(last){
+  closeModal();S.busy=false;S.round++;S.openedThisRound=0;
+  if(last) return swapOffer();
+  // Gaffer's trade: possible after rounds 3 and 4 (guaranteed once if not yet offered)
+  if(!S.traded&&(S.round===3&&Math.random()<0.5||S.round===4)) return tradeOffer();
+  render();
+}
+
+function tradeOffer(){
+  S.traded=true;
+  const live=S.boxes.filter(b=>!b.open).map(b=>b.it).filter(ix=>!S.rigged||S.items[ix].name!=="Diogo Dalot");
+  const outIdx=pick(live);const out=S.items[outIdx];
+  const target=Math.max(1,out.score+(Math.random()*40-25)+S.diff*40);
+  const inn=bankerPick(target);
+  if(!inn){render();return}
+  S.pendingTrade={outIdx,inn};
+  SFX.ring();
+  showModal(`<div style="font-size:34px">🔁</div><div class="pname">Gaffer's Trade</div>
+    ${S.blind?`<p>He wants one of your <b>${TIERS[tierOf(outIdx)]}</b> players off the board — he won't say who.<br>In their place, he'll put <b>${inn.name}</b>.</p>
+    <div style="display:flex;justify-content:center;align-items:center;gap:6px"><div class="bigbox" style="width:90px;height:90px;font-size:44px">?</div><span style="font-size:30px">➡️</span>${kit(inn.name,"")}</div>
+    <p class="pnote">Whichever box holds that mystery ${TIERS[tierOf(outIdx)]} player — maybe yours — will hold ${inn.name.split(" ").slice(-1)[0]} instead.</p>`
+    :`<p>He wants <b>${out.name}</b> off the board.<br>In their place, he'll put <b>${inn.name}</b>.</p>
+    <div style="display:flex;justify-content:center;align-items:center;gap:6px">${kit(out.name,"")}<span style="font-size:30px">➡️</span>${kit(inn.name,"")}</div>
+    <p class="pnote">Whichever box holds ${out.name.split(" ").slice(-1)[0]} — maybe yours — will hold ${inn.name.split(" ").slice(-1)[0]} instead.</p>`}
+    <div class="banker-say">🧓 "${pick(["Go on. Live a little.","Think of it as a favour.","I'm doing you a good turn here. Honest.","You'll regret saying no."])}"</div>
+    <div class="row"><button class="btn green" onclick="tradeAnswer(true)">Accept</button><button class="btn red" onclick="tradeAnswer(false)">Refuse</button></div>`);
+}
+function tradeAnswer(yes){
+  closeModal();
+  if(yes){const {outIdx,inn}=S.pendingTrade;S.items[outIdx]={name:inn.name,score:inn.score,note:"",traded:true};SFX.whoosh()}
+  render();
+}
+
+function swapOffer(){
+  render();
+  const other=S.boxes.findIndex((b,i)=>!b.open&&i!==S.mine);
+  showModal(`<div style="font-size:34px">🔄</div><p>Two boxes left: <b>yours (${S.mine+1})</b> and <b>box ${other+1}</b>.</p>
+    <p>The Gaffer offers you a swap.</p>
+    <div class="row"><button class="btn" onclick="finalReveal(false,false)">Keep mine</button>
+    <button class="btn ghost" onclick="finalReveal(false,true)">Swap</button></div>`);
+}
+
+function finalReveal(skip,swap=false){
+  closeModal();
+  const other=S.boxes.findIndex((b,i)=>!b.open&&i!==S.mine);
+  if(swap){if(S.rigged){const t=S.boxes[S.mine].it;S.boxes[S.mine].it=S.boxes[other].it;S.boxes[other].it=t}S.mine=other}
+  const mineP=itemOf(S.boxes[S.mine]);
+  const n=S.mine+1;
+  showModal(`<p>The moment of truth… opening box ${n}</p><div class="bigbox">${n}</div>`);
+  SFX.drumroll(4.2);
+  const step=(t,html)=>setTimeout(()=>showModal(html),t);
+  step(1000,`<p>Opening box ${n}…</p><div class="count">3</div><div class="bigbox shake">${n}</div>`);
+  step(2000,`<p>Opening box ${n}…</p><div class="count">2</div><div class="bigbox shake">${n}</div>`);
+  step(3000,`<p>Opening box ${n}…</p><div class="count">1</div><div class="bigbox shake">${n}</div>`);
+  setTimeout(()=>{
+    let verdict,good;
+    if(S.dealt!==null){good=S.dealt.score>=mineP.score;
+      verdict=good?`✅ You beat the Gaffer! You took ${S.dealt.name} — your box only had ${mineP.name}.`
+        :`😬 Ouch. You took ${S.dealt.name}, but your box had ${mineP.name}.`;
+    } else {good=mineP.score>=50;
+      verdict=S.reverse
+        ?(mineP.score>=75?`🏆 Gloriously awful! You've landed ${mineP.name}!`:`You've ended up with ${mineP.name}. ${mineP.score<20?"Far too good — commiserations!":"Bad, but not bad enough."}`)
+        :(mineP.score>=75?`🏆 Massive! You've signed ${mineP.name}!`:`You've signed ${mineP.name}. ${mineP.score<20?"Commiserations…":mineP.score<50?"Could have been worse.":"Not bad at all!"}`);
+    }
+    if(S.rigged){good=true;verdict=S.dealtOriginal?`📋 Your deal fell through, and your box had Dalot anyway. Dalot it is!`:`🏆 You've signed Diogo Dalot!`}
+    const finalLine=S.rigged?pick(["It was always going to be Dalot!","Dalot! Of course it's Dalot! It's always Dalot!","Scenes! Diogo Dalot, the one and only!"]):good?pick(["What a night! Scenes here!","They'll be talking about this one for years!","You couldn't write it! Absolute scenes!"]):pick(["Heartbreak. Pure heartbreak.","That's football, I'm afraid. Cruel game.","The Gaffer wins this one. Hard to watch."]);
+    setTimeout(()=>say(`It's ${mineP.name}! ${finalLine}`),900);
+    SFX.crash();buzz([400,150,400,150,800]);
+    if(good){setTimeout(()=>{SFX.fanfare();SFX.cheer()},300);confetti()}else setTimeout(()=>{SFX.groan();SFX.sad()},300);
+    showModal(`<div class="slowmo">${kit(mineP.name,n)}<div class="pname">${mineP.name}</div></div>
+      <p style="font-weight:700">${verdict}</p>
+      <div class="commentary">🎙️ ${finalLine}</div>
+      ${S.trivia.asked?`<p class="pnote">Trivia score: ${S.trivia.right}/${S.trivia.asked}</p>`:""}
+      ${recapHTML(mineP)}
+      <div class="row"><button class="btn ghost" onclick="shareResult()">📋 Copy result</button>
+        <a class="btn green" style="text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(resultText(mineP))}">WhatsApp</a></div>
+      <div id="shareOut"></div>
+      <div class="row"><button class="btn" onclick="location.reload()">Play again</button></div>`);
+    S.finalPlayer=mineP;
+  },4200);
+}
+
+// ---------- Recap & share ----------
+function recapHTML(mine){
+  if(!S.offerLog.length) return "";
+  const rows=S.offerLog.map(o=>{
+    const better=o.score>mine.score, took=(S.dealtOriginal||S.dealt)&&(S.dealtOriginal||S.dealt).name===o.name;
+    const verdict=took?(better?"✅ Took it — good call":"😬 Took it — shouldn't have")
+      :(better?"❌ Should've taken it":"👍 Right to refuse");
+    return `<div><span>R${o.round}: <b>${o.name}</b></span><span>${verdict}</span></div>`}).join("");
+  const best=S.offerLog.reduce((a,b)=>b.score>a.score?b:a);
+  return `<div class="recap"><b>📊 Game recap</b>${rows}
+    <p class="pnote" style="text-align:left">Your box: <b>${mine.name}</b>. Best offer: <b>${best.name}</b>${best.score>mine.score?" — better than your box":""}.</p></div>`;
+}
+function resultText(mine){
+  const squad=THEMES[S.theme].label+(S.reverse?" (Reverse)":"");
+  const lines=[`⚽ DEAL OR NO DEAL — ${squad}`,`My box (${S.mine+1}): ${mine.name}`];
+  if(S.dealt) lines.push(`🤝 DEAL for ${S.dealt.name} — ${S.dealt.score>=mine.score?"beat the Gaffer!":"the Gaffer won 😬"}`);
+  else lines.push("🙅 No Deal all the way!");
+  lines.push(`Gaffer offered: ${S.offerLog.map(o=>o.name).join(" → ")}`);
+  if(S.trivia.asked) lines.push(`❓ Trivia: ${S.trivia.right}/${S.trivia.asked}`);
+  return lines.join("\n");
+}
+function shareResult(){
+  const t=resultText(S.finalPlayer);
+  const done=()=>{$("shareOut").innerHTML=`<p class="pnote">✅ Copied — paste it into the group chat.</p>`};
+  const fallback=()=>{$("shareOut").innerHTML=`<p class="pnote">Copy this:</p><textarea class="sharebox" readonly>${t}</textarea>`;const ta=$("shareOut").querySelector("textarea");ta.focus();ta.select()};
+  try{navigator.clipboard.writeText(t).then(done,fallback)}catch(e){fallback()}
+}
+
+function showModal(h){$("modal").innerHTML=h;$("ov").classList.add("on")}
+function closeModal(){$("ov").classList.remove("on")}
+</script>
+</body>
+</html>
